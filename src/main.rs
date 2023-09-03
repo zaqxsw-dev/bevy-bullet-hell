@@ -37,8 +37,7 @@ fn main() {
 				})
 				.set(RenderPlugin { wgpu_settings }),
 		)
-		.add_plugin(HanabiPlugin)
-		.add_plugin(GamePlugin)
+		.add_plugins((HanabiPlugin, GamePlugin))
 		.add_startup_system(init)
 		.add_system(set_window_icon.on_startup())
 		.add_system(my_cursor_system)

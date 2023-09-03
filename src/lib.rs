@@ -108,22 +108,24 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
 	fn build(&self, app: &mut App) {
-		app.add_state::<GameState>()
-			.add_state::<MenuState>()
-			.add_plugin(LoadingPlugin)
-			.add_plugin(MenuPlugin)
-			.add_plugin(ActionsPlugin)
-			.add_plugin(InternalAudioPlugin)
-			.add_plugin(EnemySpawnPlugin)
-			.add_plugin(PlayerPlugin)
-			.add_plugin(PlayerHealthBar)
-			.add_plugin(PlayerExpBar)
-			.add_plugin(DamageHintPlugin);
+		app.add_state::<GameState>().add_state::<MenuState>().add_plugins((
+			LoadingPlugin,
+			MenuPlugin,
+			ActionsPlugin,
+			InternalAudioPlugin,
+			EnemySpawnPlugin,
+			PlayerPlugin,
+			PlayerHealthBar,
+			PlayerExpBar,
+			DamageHintPlugin,
+		));
 
 		#[cfg(debug_assertions)]
 		{
-			app.add_plugin(FrameTimeDiagnosticsPlugin::default())
-				.add_plugin(LogDiagnosticsPlugin::default());
+			app.add_plugins((
+				FrameTimeDiagnosticsPlugin::default(),
+				LogDiagnosticsPlugin::default(),
+			));
 		}
 	}
 }

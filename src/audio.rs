@@ -9,15 +9,17 @@ pub struct InternalAudioPlugin;
 // This plugin is responsible to control the game audio
 impl Plugin for InternalAudioPlugin {
 	fn build(&self, app: &mut App) {
-		app.add_plugin(AudioPlugin)
+		app.add_plugins(AudioPlugin)
 			.add_audio_channel::<MenuAudio>()
-			.add_system(start_audio.in_schedule(OnEnter(GameState::Menu)))
-			.add_system(start_menu_audio.in_schedule(OnEnter(GameState::Menu)))
-			.add_system(stop_menu_audio.in_schedule(OnExit(GameState::Menu)))
-			.add_system(
+			.add_systems(
+				OnEnter(GameState::Menu),
+				(start_audio, start_menu_audio, stop_menu_audio),
+			)
+			.add_systems(
+				Update,
 				control_flying_sound
 					.after(set_movement_actions)
-					.in_set(OnUpdate(GameState::Playing)),
+					.run_if(in_state(GameState::Playing)),
 			);
 	}
 }

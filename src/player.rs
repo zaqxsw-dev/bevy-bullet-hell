@@ -32,10 +32,12 @@ impl Default for Player {
 #[derive(Component)]
 pub struct PlayerMove;
 
+#[derive(Event)]
 pub struct PlayerGetDamageEvent {
 	damage: i32,
 }
 
+#[derive(Event)]
 pub struct PlayerGetExpEvent {
 	pub exp: u32,
 }
@@ -44,15 +46,20 @@ impl Plugin for PlayerPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_event::<PlayerGetDamageEvent>()
 			.add_event::<PlayerGetExpEvent>()
-			.add_system(spawn_player.in_schedule(OnEnter(GameState::Playing)))
-			.add_system(move_player.in_set(OnUpdate(GameState::Playing)))
-			.add_system(turn_player.in_set(OnUpdate(GameState::Playing)))
-			.add_system(player_fire_system.in_set(OnUpdate(GameState::Playing)))
-			.add_system(movable_system.in_set(OnUpdate(GameState::Playing)))
-			.add_system(player_damage_system.in_set(OnUpdate(GameState::Playing)))
-			.add_system(player_bullet_hit_system.in_set(OnUpdate(GameState::Playing)))
-			.add_system(get_player_damage_event.in_set(OnUpdate(GameState::Playing)))
-			.add_system(get_player_exp_event.in_set(OnUpdate(GameState::Playing)));
+			.add_systems(OnEnter(GameState::Playing), spawn_player)
+			.add_systems(
+				Update,
+				(
+					move_player.run_if(in_state(GameState::Playing)),
+					turn_player.run_if(in_state(GameState::Playing)),
+					player_fire_system.run_if(in_state(GameState::Playing)),
+					movable_system.run_if(in_state(GameState::Playing)),
+					player_damage_system.run_if(in_state(GameState::Playing)),
+					player_bullet_hit_system.run_if(in_state(GameState::Playing)),
+					get_player_damage_event.run_if(in_state(GameState::Playing)),
+					get_player_exp_event.run_if(in_state(GameState::Playing)),
+				),
+			);
 	}
 }
 
@@ -156,30 +163,31 @@ fn spawn_player(
 	gradient.add_key(1.0, Vec4::new(0.5, 0.5, 1.0, 0.2));
 
 	let spawner = Spawner::rate(100.0.into());
-	let effect = effects.add(
-		EffectAsset {
-			name: "Effect".into(),
-			capacity: 1000,
-			spawner,
-			..Default::default()
-		}
-		.init(InitPositionCircleModifier {
-			center: Vec3::ZERO,
-			axis: Vec3::Z,
-			radius: 30.0,
+	let writer = ExprWriter::new();
+	let module = Module::default();
+	let effect_asset = EffectAsset::new(1000, spawner, module)
+		.with_name("Effect")
+		.init(SetPositionCircleModifier {
+			center: writer.lit(Vec3::ZERO).expr(),
+			axis: writer.lit(Vec3::Z).expr(),
+			radius: writer.lit(30.0).expr(),
 			dimension: ShapeDimension::Surface,
 		})
-		.init(InitVelocityCircleModifier {
-			center: Vec3::ZERO,
-			axis: Vec3::Z,
-			speed: 50.0.into(),
+		.init(SetVelocityCircleModifier {
+			center: writer.lit(Vec3::ZERO).expr(),
+			axis: writer.lit(Vec3::Z).expr(),
+			speed: writer.lit(50.0).expr(),
 		})
-		.init(InitLifetimeModifier { lifetime: 1_f32.into() })
+		.init(SetAttributeModifier {
+			value: writer.lit(1_f32).expr(),
+			attribute: Attribute::LIFETIME,
+		})
 		.render(SizeOverLifetimeModifier {
 			gradient: Gradient::constant(Vec2::splat(1.0)),
+			screen_space_size: true,
 		})
-		.render(ColorOverLifetimeModifier { gradient }),
-	);
+		.render(ColorOverLifetimeModifier { gradient });
+	let effect = effects.add(effect_asset);
 	commands
 		.spawn(ParticleEffectBundle {
 			effect: ParticleEffect::new(effect).with_z_layer_2d(Some(10.0)),

@@ -10,9 +10,14 @@ pub struct EnemySpawnPlugin;
 
 impl Plugin for EnemySpawnPlugin {
 	fn build(&self, app: &mut App) {
-		app.add_system(enemy_move_system.in_set(OnUpdate(GameState::Playing)))
-			.add_system(enemy_despawn_system.in_set(OnUpdate(GameState::Playing)))
-			.add_system(enemy_spawn_system.in_set(OnUpdate(GameState::Playing)));
+		app.add_systems(
+			Update,
+			(
+				enemy_move_system.run_if(in_state(GameState::Playing)),
+				enemy_despawn_system.run_if(in_state(GameState::Playing)),
+				enemy_spawn_system.run_if(in_state(GameState::Playing)),
+			),
+		);
 	}
 }
 

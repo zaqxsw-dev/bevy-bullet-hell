@@ -8,7 +8,6 @@ use crate::{
 
 #[derive(Bundle)]
 struct HealthBarBundle {
-	#[bundle]
 	text: TextBundle,
 }
 
@@ -22,9 +21,9 @@ pub struct LevelupMenu;
 
 impl Plugin for LevelupMenu {
 	fn build(&self, app: &mut App) {
-		app.add_system(spawn_lvlup_menu.in_schedule(OnEnter(GameState::Upgrade)))
-			.add_system(update_lvlup_menu.in_set(OnUpdate(GameState::Upgrade)))
-			.add_system(despawn_lvlup_menu.in_schedule(OnExit(GameState::Upgrade)));
+		app.add_systems(OnEnter(GameState::Upgrade), spawn_lvlup_menu)
+			.add_systems(Update, update_lvlup_menu.run_if(in_state(GameState::Upgrade)))
+			.add_systems(OnExit(GameState::Upgrade), despawn_lvlup_menu);
 	}
 }
 
@@ -71,7 +70,8 @@ fn spawn_lvlup_menu(
 			.spawn(NodeBundle {
 				style: Style {
 					position_type: PositionType::Absolute,
-					size: Size::all(Val::Percent(100.0)),
+					width: Val::Percent(100.0),
+					height: Val::Percent(100.0),
 					align_items: AlignItems::Start,
 					justify_content: JustifyContent::End,
 					..default()

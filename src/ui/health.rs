@@ -8,7 +8,6 @@ use crate::{
 
 #[derive(Bundle)]
 struct HealthBarBundle {
-	#[bundle]
 	text: TextBundle,
 }
 
@@ -22,8 +21,13 @@ pub struct PlayerHealthBar;
 
 impl Plugin for PlayerHealthBar {
 	fn build(&self, app: &mut App) {
-		app.add_system(spawn_health_bar.in_set(OnUpdate(GameState::Playing)))
-			.add_system(update_health_bar.in_set(OnUpdate(GameState::Playing)));
+		app.add_systems(
+			Update,
+			(
+				spawn_health_bar.run_if(in_state(GameState::Playing)),
+				update_health_bar.run_if(in_state(GameState::Playing)),
+			),
+		);
 	}
 }
 
@@ -68,7 +72,8 @@ fn spawn_health_bar(
 			.spawn(NodeBundle {
 				style: Style {
 					position_type: PositionType::Absolute,
-					size: Size::all(Val::Percent(100.0)),
+					width: Val::Percent(100.0),
+					height: Val::Percent(100.0),
 					align_items: AlignItems::Start,
 					justify_content: JustifyContent::End,
 					..default()

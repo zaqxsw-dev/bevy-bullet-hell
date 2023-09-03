@@ -11,10 +11,14 @@ pub struct ActionsPlugin;
 
 impl Plugin for ActionsPlugin {
 	fn build(&self, app: &mut App) {
-		app.init_resource::<Actions>()
-			.add_system(set_movement_actions.in_set(OnUpdate(GameState::Playing)))
-			.add_system(set_shooting_actions.in_set(OnUpdate(GameState::Playing)))
-			.add_system(set_menu_actions.in_set(OnUpdate(GameState::Playing)));
+		app.init_resource::<Actions>().add_systems(
+			Update,
+			(
+				set_movement_actions.run_if(in_state(GameState::Playing)),
+				set_shooting_actions.run_if(in_state(GameState::Playing)),
+				set_menu_actions.run_if(in_state(GameState::Playing)),
+			),
+		);
 	}
 }
 

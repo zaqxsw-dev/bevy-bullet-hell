@@ -8,10 +8,15 @@ pub struct MenuPlugin;
 impl Plugin for MenuPlugin {
 	fn build(&self, app: &mut App) {
 		app.init_resource::<ButtonColors>()
-			.add_system(setup_menu.in_schedule(OnEnter(GameState::Menu)))
-			.add_system(handle_hover_buttons.in_set(OnUpdate(GameState::Menu)))
-			.add_system(menu_action.in_set(OnUpdate(GameState::Menu)))
-			.add_system(cleanup_menu.in_schedule(OnExit(GameState::Menu)));
+			.add_systems(OnEnter(GameState::Menu), setup_menu)
+			.add_systems(
+				Update,
+				(
+					handle_hover_buttons.run_if(in_state(GameState::Menu)),
+					menu_action.run_if(in_state(GameState::Menu)),
+				),
+			)
+			.add_systems(OnExit(GameState::Menu), cleanup_menu);
 	}
 }
 
@@ -49,7 +54,8 @@ fn setup_menu(
 		.spawn(NodeBundle {
 			style: Style {
 				position_type: PositionType::Absolute,
-				size: Size::all(Val::Percent(100.0)),
+				width: Val::Percent(100.0),
+				height: Val::Percent(100.0),
 				flex_direction: FlexDirection::Column,
 				align_items: AlignItems::Center,
 				justify_content: JustifyContent::Center,
@@ -63,7 +69,8 @@ fn setup_menu(
 				.spawn((
 					ButtonBundle {
 						style: Style {
-							size: Size::new(Val::Px(200.0), Val::Px(75.0)),
+							width: Val::Px(200.0),
+							height: Val::Px(75.0),
 							//margin: UiRect::all(Val::Auto),
 							justify_content: JustifyContent::Center,
 							align_items: AlignItems::Center,
@@ -88,7 +95,8 @@ fn setup_menu(
 				.spawn((
 					ButtonBundle {
 						style: Style {
-							size: Size::new(Val::Px(200.0), Val::Px(50.0)),
+							width: Val::Px(200.0),
+							height: Val::Px(50.0),
 							//margin: UiRect::all(Val::Auto),
 							justify_content: JustifyContent::Center,
 							align_items: AlignItems::Center,
@@ -121,7 +129,7 @@ fn handle_hover_buttons(
 ) {
 	for (interaction, mut color) in &mut interaction_query {
 		match *interaction {
-			Interaction::Clicked => {
+			Interaction::Pressed => {
 				*color = button_colors.clicked.into();
 			}
 			Interaction::Hovered => {
@@ -143,7 +151,7 @@ fn menu_action(
 	mut game_state: ResMut<NextState<GameState>>,
 ) {
 	for (interaction, menu_button_action) in &interaction_query {
-		if *interaction == Interaction::Clicked {
+		if *interaction == Interaction::Pressed {
 			match menu_button_action {
 				MenuButtonAction::Quit => app_exit_events.send(AppExit),
 				MenuButtonAction::Play => {
