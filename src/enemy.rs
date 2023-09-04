@@ -1,7 +1,7 @@
 use crate::{
 	loading::TextureAssets,
 	player::{Player, PlayerGetExpEvent},
-	Enemy, GameData, GameState, Killable, Velocity,
+	Enemy, GameData, GameState, Killable, SceneObject, Velocity,
 };
 use bevy::prelude::*;
 use rand::{thread_rng, Rng};
@@ -62,6 +62,7 @@ fn enemy_spawn_system(
 					y: 0.5,
 					speed: 30.0,
 				})
+				.insert(SceneObject)
 				.insert(Enemy { damage: 1 });
 		}
 	}

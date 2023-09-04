@@ -3,7 +3,7 @@ use crate::loading::TextureAssets;
 use crate::ui::damage::EventDamageHintSpawn;
 use crate::{
 	movable_system, Bullet, Enemy, FromPlayer, GameData, GameState, Killable, MainCamera,
-	Mouse, Movable, SpriteSize, Velocity,
+	Mouse, Movable, SceneObject, SpriteSize, Velocity,
 };
 use bevy::prelude::*;
 use bevy::sprite::collide_aabb::collide;
@@ -87,13 +87,15 @@ fn get_lvl_exp(lvl: u32) -> u32 {
 fn get_player_damage_event(
 	mut ev_pdamage: EventReader<PlayerGetDamageEvent>,
 	mut query: Query<&mut Killable, With<Player>>,
+	mut game_state: ResMut<NextState<GameState>>,
 ) {
-	let mut player = match query.get_single_mut() {
-		Ok(val) => val,
-		Err(_) => return,
-	};
-	for ev in ev_pdamage.iter() {
-		player.hp -= ev.damage;
+	if let Ok(mut player) = query.get_single_mut() {
+		for ev in ev_pdamage.iter() {
+			player.hp -= ev.damage;
+		}
+		if player.hp <= 0 {
+			game_state.set(GameState::Gameover)
+		}
 	}
 }
 
@@ -147,6 +149,7 @@ fn spawn_player(
 		})
 		.insert(SpriteSize(image.size()))
 		.insert(PlayerMove)
+		.insert(SceneObject)
 		.insert(Player::default());
 
 	commands
@@ -208,6 +211,7 @@ fn spawn_player(
 			transform: Transform::IDENTITY,
 			..default()
 		})
+		.insert(SceneObject)
 		.insert(PlayerMove);
 }
 
@@ -307,6 +311,7 @@ fn player_fire_system(
 						..default()
 					})
 					.insert(Bullet { damage: 2 })
+					.insert(SceneObject)
 					.insert(FromPlayer)
 					.insert(Movable { auto_despawn: true })
 					.insert(Velocity {

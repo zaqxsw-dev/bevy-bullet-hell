@@ -1,6 +1,7 @@
 mod actions;
 mod audio;
 mod enemy;
+mod gameover;
 mod loading;
 mod menu;
 pub mod player;
@@ -18,6 +19,7 @@ use bevy::app::App;
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
 use enemy::EnemySpawnPlugin;
+use gameover::GameOverPlugin;
 use player::Player;
 use ui::damage::DamageHintPlugin;
 use ui::exp::PlayerExpBar;
@@ -29,6 +31,7 @@ pub enum GameState {
 	Loading,
 	Playing,
 	Upgrade,
+	Gameover,
 	Menu,
 }
 
@@ -68,6 +71,9 @@ impl Default for GameData {
 
 #[derive(Component)]
 pub struct MainCamera;
+
+#[derive(Component)]
+pub struct SceneObject;
 
 #[derive(Component)]
 pub struct Enemy {
@@ -111,6 +117,7 @@ impl Plugin for GamePlugin {
 		app.add_state::<GameState>().add_state::<MenuState>().add_plugins((
 			LoadingPlugin,
 			MenuPlugin,
+			GameOverPlugin,
 			ActionsPlugin,
 			InternalAudioPlugin,
 			EnemySpawnPlugin,

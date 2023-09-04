@@ -71,7 +71,6 @@ fn setup_menu(
 						style: Style {
 							width: Val::Px(200.0),
 							height: Val::Px(75.0),
-							//margin: UiRect::all(Val::Auto),
 							justify_content: JustifyContent::Center,
 							align_items: AlignItems::Center,
 							..Default::default()
@@ -97,12 +96,10 @@ fn setup_menu(
 						style: Style {
 							width: Val::Px(200.0),
 							height: Val::Px(50.0),
-							//margin: UiRect::all(Val::Auto),
 							justify_content: JustifyContent::Center,
 							align_items: AlignItems::Center,
 							..Default::default()
 						},
-						//background_color: button_colors.normal.into(),
 						..Default::default()
 					},
 					MenuButtonAction::Quit,
