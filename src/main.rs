@@ -1,6 +1,7 @@
 // disable console on windows for release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use bevy::render::camera::ScalingMode;
 use bevy::render::render_resource::WgpuFeatures;
 use bevy::render::RenderPlugin;
 use bevy::window::PrimaryWindow;
@@ -13,8 +14,8 @@ use std::io::Cursor;
 use winit::window::Icon;
 
 fn main() {
-	let mut wgpu_settings = WgpuSettings::default();
-	wgpu_settings.features.set(WgpuFeatures::VERTEX_WRITABLE_STORAGE, true);
+	//let mut wgpu_settings = WgpuSettings::default();
+	//wgpu_settings.features.set(WgpuFeatures::VERTEX_WRITABLE_STORAGE, true);
 
 	App::new()
 		//.insert_resource(Msaa::Off)
@@ -25,23 +26,19 @@ fn main() {
 			area: Vec2::ZERO,
 		})
 		.add_plugins(
-			DefaultPlugins
-				.set(WindowPlugin {
-					primary_window: Some(Window {
-						title: "Bevy game".to_string(), // ToDo
-						resolution: (800., 600.).into(),
-						canvas: Some("#bevy".to_owned()),
-						..default()
-					}),
+			DefaultPlugins.set(WindowPlugin {
+				primary_window: Some(Window {
+					title: "Bevy game".to_string(), // ToDo
+					resolution: (800., 600.).into(),
+					//canvas: Some("#bevy".to_owned()),
 					..default()
-				})
-				.set(RenderPlugin { wgpu_settings }),
+				}),
+				..default()
+			}), //.set(RenderPlugin { wgpu_settings }),
 		)
-		.add_plugin(HanabiPlugin)
-		.add_plugin(GamePlugin)
-		.add_startup_system(init)
-		.add_system(set_window_icon.on_startup())
-		.add_system(my_cursor_system)
+		.add_plugins((HanabiPlugin, GamePlugin))
+		.add_systems(Startup, (init, set_window_icon))
+		.add_systems(Update, my_cursor_system)
 		.run();
 }
 

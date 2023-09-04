@@ -50,11 +50,11 @@ default = [
 ]
 
 [dependencies]
-bevy = { version = "0.10", default-features = false }
-bevy_kira_audio = { version = "0.15" }
-bevy_asset_loader = { version = "0.15" }
+bevy = { version = "0.11", default-features = false }
+bevy_kira_audio = { version = "0.16" }
+bevy_asset_loader = { version = "0.17" }
 rand = { version = "0.8.3" }
-bevy_hanabi = "0.6"
+bevy_hanabi = "0.7"
 
 # keep the following in sync with Bevy's dependencies
 winit = { version = "0.28", default-features = false }

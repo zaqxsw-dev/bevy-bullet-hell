@@ -13,6 +13,7 @@ pub struct DamageHint {
 	timer: Timer,
 }
 
+#[derive(Event)]
 pub struct EventDamageHintSpawn {
 	pub damage: u32,
 	pub position: Vec2,
@@ -20,9 +21,13 @@ pub struct EventDamageHintSpawn {
 
 impl Plugin for DamageHintPlugin {
 	fn build(&self, app: &mut App) {
-		app.add_event::<EventDamageHintSpawn>()
-			.add_system(spawn_damage_hint.in_set(OnUpdate(GameState::Playing)))
-			.add_system(damage_hint_animation.in_set(OnUpdate(GameState::Playing)));
+		app.add_event::<EventDamageHintSpawn>().add_systems(
+			Update,
+			(
+				spawn_damage_hint.run_if(in_state(GameState::Playing)),
+				damage_hint_animation.run_if(in_state(GameState::Playing)),
+			),
+		);
 	}
 }
 

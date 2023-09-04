@@ -3,7 +3,7 @@ use crate::loading::TextureAssets;
 use crate::ui::damage::EventDamageHintSpawn;
 use crate::{
 	movable_system, Bullet, Enemy, FromPlayer, GameData, GameState, Killable, MainCamera,
-	Mouse, Movable, SpriteSize, Velocity,
+	Mouse, Movable, SceneObject, SpriteSize, Velocity,
 };
 use bevy::prelude::*;
 use bevy::sprite::collide_aabb::collide;
@@ -32,10 +32,12 @@ impl Default for Player {
 #[derive(Component)]
 pub struct PlayerMove;
 
+#[derive(Event)]
 pub struct PlayerGetDamageEvent {
 	damage: i32,
 }
 
+#[derive(Event)]
 pub struct PlayerGetExpEvent {
 	pub exp: u32,
 }
@@ -44,15 +46,20 @@ impl Plugin for PlayerPlugin {
 	fn build(&self, app: &mut App) {
 		app.add_event::<PlayerGetDamageEvent>()
 			.add_event::<PlayerGetExpEvent>()
-			.add_system(spawn_player.in_schedule(OnEnter(GameState::Playing)))
-			.add_system(move_player.in_set(OnUpdate(GameState::Playing)))
-			.add_system(turn_player.in_set(OnUpdate(GameState::Playing)))
-			.add_system(player_fire_system.in_set(OnUpdate(GameState::Playing)))
-			.add_system(movable_system.in_set(OnUpdate(GameState::Playing)))
-			.add_system(player_damage_system.in_set(OnUpdate(GameState::Playing)))
-			.add_system(player_bullet_hit_system.in_set(OnUpdate(GameState::Playing)))
-			.add_system(get_player_damage_event.in_set(OnUpdate(GameState::Playing)))
-			.add_system(get_player_exp_event.in_set(OnUpdate(GameState::Playing)));
+			.add_systems(OnEnter(GameState::Playing), spawn_player)
+			.add_systems(
+				Update,
+				(
+					move_player.run_if(in_state(GameState::Playing)),
+					turn_player.run_if(in_state(GameState::Playing)),
+					player_fire_system.run_if(in_state(GameState::Playing)),
+					movable_system.run_if(in_state(GameState::Playing)),
+					player_damage_system.run_if(in_state(GameState::Playing)),
+					player_bullet_hit_system.run_if(in_state(GameState::Playing)),
+					get_player_damage_event.run_if(in_state(GameState::Playing)),
+					get_player_exp_event.run_if(in_state(GameState::Playing)),
+				),
+			);
 	}
 }
 
@@ -80,13 +87,15 @@ fn get_lvl_exp(lvl: u32) -> u32 {
 fn get_player_damage_event(
 	mut ev_pdamage: EventReader<PlayerGetDamageEvent>,
 	mut query: Query<&mut Killable, With<Player>>,
+	mut game_state: ResMut<NextState<GameState>>,
 ) {
-	let mut player = match query.get_single_mut() {
-		Ok(val) => val,
-		Err(_) => return,
-	};
-	for ev in ev_pdamage.iter() {
-		player.hp -= ev.damage;
+	if let Ok(mut player) = query.get_single_mut() {
+		for ev in ev_pdamage.iter() {
+			player.hp -= ev.damage;
+		}
+		if player.hp <= 0 {
+			game_state.set(GameState::Gameover)
+		}
 	}
 }
 
@@ -115,6 +124,7 @@ fn spawn_player(
 	images: Res<Assets<Image>>,
 	query: Query<Entity, With<Player>>,
 	mut effects: ResMut<Assets<EffectAsset>>,
+	mut meshes: ResMut<Assets<Mesh>>,
 	mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
 	if query.iter().count() > 0 {
@@ -139,10 +149,17 @@ fn spawn_player(
 		})
 		.insert(SpriteSize(image.size()))
 		.insert(PlayerMove)
+		.insert(SceneObject)
 		.insert(Player::default());
 
 	commands
 		.spawn(MaterialMesh2dBundle {
+			mesh: meshes
+				.add(Mesh::from(shape::Quad {
+					size: Vec2::splat(1.0),
+					..Default::default()
+				}))
+				.into(),
 			material: materials.add(ColorMaterial {
 				color: Color::PURPLE,
 				..Default::default()
@@ -155,36 +172,46 @@ fn spawn_player(
 	gradient.add_key(0.0, Vec4::new(0.5, 0.5, 1.0, 1.0));
 	gradient.add_key(1.0, Vec4::new(0.5, 0.5, 1.0, 0.2));
 
-	let spawner = Spawner::rate(100.0.into());
-	let effect = effects.add(
-		EffectAsset {
-			name: "Effect".into(),
-			capacity: 1000,
-			spawner,
-			..Default::default()
-		}
-		.init(InitPositionCircleModifier {
-			center: Vec3::ZERO,
-			axis: Vec3::Z,
-			radius: 30.0,
-			dimension: ShapeDimension::Surface,
-		})
-		.init(InitVelocityCircleModifier {
-			center: Vec3::ZERO,
-			axis: Vec3::Z,
-			speed: 50.0.into(),
-		})
-		.init(InitLifetimeModifier { lifetime: 1_f32.into() })
+	let spawner = Spawner::rate(200.0.into());
+	let writer = ExprWriter::new();
+	let lifetime = writer.lit(1.).expr();
+	let age = writer.lit(0.).expr();
+	let init_age = SetAttributeModifier::new(Attribute::AGE, age);
+	let init_lifetime = SetAttributeModifier::new(Attribute::LIFETIME, lifetime);
+	let init_pos_circle = SetPositionCircleModifier {
+		center: writer.lit(Vec3::ZERO).expr(),
+		axis: writer.lit(Vec3::Z).expr(),
+		radius: writer.lit(25.00).expr(),
+		dimension: ShapeDimension::Surface,
+	};
+	let init_vel = SetVelocityCircleModifier {
+		center: writer.lit(Vec3::ZERO).expr(),
+		axis: writer.lit(Vec3::Z).expr(),
+		speed: writer.lit(15.0).expr(),
+	};
+
+	let effect_asset = EffectAsset::new(4000, spawner, writer.finish())
+		.with_name("Effect")
+		.init(init_pos_circle)
+		.init(init_vel)
+		.init(init_age)
+		.init(init_lifetime)
+		//.update(update_drag)
+		//.update(tangent_accel)
+		.render(ColorOverLifetimeModifier { gradient })
 		.render(SizeOverLifetimeModifier {
 			gradient: Gradient::constant(Vec2::splat(1.0)),
-		})
-		.render(ColorOverLifetimeModifier { gradient }),
-	);
+			screen_space_size: false,
+		});
+
+	let effect = effects.add(effect_asset);
 	commands
 		.spawn(ParticleEffectBundle {
-			effect: ParticleEffect::new(effect).with_z_layer_2d(Some(10.0)),
+			effect: ParticleEffect::new(effect).with_z_layer_2d(Some(0.2)),
+			transform: Transform::IDENTITY,
 			..default()
 		})
+		.insert(SceneObject)
 		.insert(PlayerMove);
 }
 
@@ -284,6 +311,7 @@ fn player_fire_system(
 						..default()
 					})
 					.insert(Bullet { damage: 2 })
+					.insert(SceneObject)
 					.insert(FromPlayer)
 					.insert(Movable { auto_despawn: true })
 					.insert(Velocity {
