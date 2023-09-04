@@ -122,6 +122,7 @@ fn spawn_player(
 	images: Res<Assets<Image>>,
 	query: Query<Entity, With<Player>>,
 	mut effects: ResMut<Assets<EffectAsset>>,
+	mut meshes: ResMut<Assets<Mesh>>,
 	mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
 	if query.iter().count() > 0 {
@@ -150,6 +151,12 @@ fn spawn_player(
 
 	commands
 		.spawn(MaterialMesh2dBundle {
+			mesh: meshes
+				.add(Mesh::from(shape::Quad {
+					size: Vec2::splat(1.0),
+					..Default::default()
+				}))
+				.into(),
 			material: materials.add(ColorMaterial {
 				color: Color::PURPLE,
 				..Default::default()
@@ -162,35 +169,43 @@ fn spawn_player(
 	gradient.add_key(0.0, Vec4::new(0.5, 0.5, 1.0, 1.0));
 	gradient.add_key(1.0, Vec4::new(0.5, 0.5, 1.0, 0.2));
 
-	let spawner = Spawner::rate(100.0.into());
+	let spawner = Spawner::rate(200.0.into());
 	let writer = ExprWriter::new();
-	let module = Module::default();
-	let effect_asset = EffectAsset::new(1000, spawner, module)
+	let lifetime = writer.lit(1.).expr();
+	let age = writer.lit(0.).expr();
+	let init_age = SetAttributeModifier::new(Attribute::AGE, age);
+	let init_lifetime = SetAttributeModifier::new(Attribute::LIFETIME, lifetime);
+	let init_pos_circle = SetPositionCircleModifier {
+		center: writer.lit(Vec3::ZERO).expr(),
+		axis: writer.lit(Vec3::Z).expr(),
+		radius: writer.lit(25.00).expr(),
+		dimension: ShapeDimension::Surface,
+	};
+	let init_vel = SetVelocityCircleModifier {
+		center: writer.lit(Vec3::ZERO).expr(),
+		axis: writer.lit(Vec3::Z).expr(),
+		speed: writer.lit(15.0).expr(),
+	};
+
+	let effect_asset = EffectAsset::new(4000, spawner, writer.finish())
 		.with_name("Effect")
-		.init(SetPositionCircleModifier {
-			center: writer.lit(Vec3::ZERO).expr(),
-			axis: writer.lit(Vec3::Z).expr(),
-			radius: writer.lit(30.0).expr(),
-			dimension: ShapeDimension::Surface,
-		})
-		.init(SetVelocityCircleModifier {
-			center: writer.lit(Vec3::ZERO).expr(),
-			axis: writer.lit(Vec3::Z).expr(),
-			speed: writer.lit(50.0).expr(),
-		})
-		.init(SetAttributeModifier {
-			value: writer.lit(1_f32).expr(),
-			attribute: Attribute::LIFETIME,
-		})
+		.init(init_pos_circle)
+		.init(init_vel)
+		.init(init_age)
+		.init(init_lifetime)
+		//.update(update_drag)
+		//.update(tangent_accel)
+		.render(ColorOverLifetimeModifier { gradient })
 		.render(SizeOverLifetimeModifier {
 			gradient: Gradient::constant(Vec2::splat(1.0)),
-			screen_space_size: true,
-		})
-		.render(ColorOverLifetimeModifier { gradient });
+			screen_space_size: false,
+		});
+
 	let effect = effects.add(effect_asset);
 	commands
 		.spawn(ParticleEffectBundle {
-			effect: ParticleEffect::new(effect).with_z_layer_2d(Some(10.0)),
+			effect: ParticleEffect::new(effect).with_z_layer_2d(Some(0.2)),
+			transform: Transform::IDENTITY,
 			..default()
 		})
 		.insert(PlayerMove);

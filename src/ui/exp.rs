@@ -28,8 +28,8 @@ fn get_exp_bar_style(player: &Player) -> Style {
 	let lvl_percent = (player.exp * 100) as f32 / player.next_lvl_exp as f32;
 	Style {
 		margin: UiRect::all(Val::Px(2.0)),
-		width: Val::Percent(100.0),
-		height: Val::Percent(100.0),
+		width: Val::Percent(lvl_percent),
+		height: Val::Px(6.0),
 		..Default::default()
 	}
 }
