@@ -1,10 +1,12 @@
-use crate::{
-	loading::TextureAssets,
-	player::{Player, PlayerGetExpEvent},
-	Enemy, GameData, GameState, Killable, SceneObject, Velocity,
-};
 use bevy::prelude::*;
 use rand::{thread_rng, Rng};
+
+use crate::{
+	components::killable::Killable,
+	loading::TextureAssets,
+	player::{Player, PlayerGetExpEvent},
+	Enemy, GameData, GameState, SceneObject, Velocity,
+};
 
 pub struct EnemySpawnPlugin;
 
@@ -39,8 +41,8 @@ fn enemy_spawn_system(
 				z: 0.0,
 			};
 			translation = translation.normalize() * rng.gen_range(0.2f32..1.0).cbrt() * 400.;
-			translation.x = translation.x + player.translation.x;
-			translation.y = translation.y + player.translation.y;
+			translation.x += player.translation.x;
+			translation.y += player.translation.y;
 
 			commands
 				.spawn(SpriteBundle {
@@ -52,18 +54,14 @@ fn enemy_spawn_system(
 					texture: textures.enemy.clone(),
 					..Default::default()
 				})
-				.insert(Killable {
-					hp: 3,
-					god_mode: false,
-					hp_max: 3,
-				})
+				.insert(Killable::new(3, 3, false))
 				.insert(Velocity {
 					x: 0.5,
 					y: 0.5,
 					speed: 30.0,
 				})
 				.insert(SceneObject)
-				.insert(Enemy { damage: 1 });
+				.insert(Enemy { damage: 1, kill_exp: 15 });
 		}
 	}
 }

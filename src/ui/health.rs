@@ -1,20 +1,15 @@
 use bevy::prelude::*;
 
 use crate::{
+	components::{killable::Killable, playerui::HealthBarComponent},
 	loading::{FontAssets, TextureAssets},
 	player::Player,
-	GameState, Killable,
+	GameState,
 };
 
 #[derive(Bundle)]
 struct HealthBarBundle {
 	text: TextBundle,
-}
-
-#[derive(Component)]
-struct HealthBarComponent {
-	hp: i32,
-	hp_max: i32,
 }
 
 pub struct PlayerHealthBar;

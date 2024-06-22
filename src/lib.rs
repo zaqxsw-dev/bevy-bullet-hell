@@ -1,10 +1,11 @@
 mod actions;
 mod audio;
-mod enemy;
-mod gameover;
+pub mod components;
+pub mod constants;
 mod loading;
 mod menu;
 pub mod player;
+pub mod plugins;
 mod skill;
 mod ui;
 
@@ -18,9 +19,10 @@ use bevy::app::App;
 #[cfg(debug_assertions)]
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
-use enemy::EnemySpawnPlugin;
-use gameover::GameOverPlugin;
-use player::Player;
+use constants::{BASE_SPEED, TIME_STEP};
+use plugins::despawner::Despawner;
+use plugins::enemy::EnemySpawnPlugin;
+use plugins::gameover::GameOverPlugin;
 use ui::damage::DamageHintPlugin;
 use ui::exp::PlayerExpBar;
 use ui::health::PlayerHealthBar;
@@ -41,10 +43,6 @@ enum MenuState {
 	Menu,
 	Disabled,
 }
-
-pub const DESPAWN_BULLET_DISTANCE: f32 = 2000.0;
-pub const TIME_STEP: f32 = 1. / 60.;
-const BASE_SPEED: f32 = 400.;
 
 #[derive(Default, Resource)]
 pub struct Mouse {
@@ -78,6 +76,7 @@ pub struct SceneObject;
 #[derive(Component)]
 pub struct Enemy {
 	damage: i32,
+	kill_exp: u32,
 }
 
 #[derive(Component)]
@@ -91,13 +90,6 @@ pub struct SpriteSize(pub Vec2);
 #[derive(Component)]
 pub struct Movable {
 	pub auto_despawn: bool,
-}
-
-#[derive(Component)]
-pub struct Killable {
-	pub hp: i32,
-	pub god_mode: bool,
-	pub hp_max: i32,
 }
 
 #[derive(Component)]
@@ -125,44 +117,20 @@ impl Plugin for GamePlugin {
 			PlayerHealthBar,
 			PlayerExpBar,
 			DamageHintPlugin,
+			Despawner,
 		));
 
 		#[cfg(debug_assertions)]
 		{
-			app.add_plugins((
-				FrameTimeDiagnosticsPlugin::default(),
-				LogDiagnosticsPlugin::default(),
-			));
+			app.add_plugins((FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin::default()));
 		}
 	}
 }
 
-fn movable_system(
-	mut commands: Commands,
-	//cursor: Res<Mouse>,
-	mut query: Query<(Entity, &Velocity, &mut Transform, &Movable), With<Bullet>>,
-	player_q: Query<&Transform, (With<Player>, Without<Bullet>)>,
-) {
-	if let Ok(player) = player_q.get_single() {
-		for (entity, velocity, mut transform, movable) in query.iter_mut() {
-			let translation = &mut transform.translation;
-			translation.x += velocity.x * TIME_STEP * BASE_SPEED;
-			translation.y += velocity.y * TIME_STEP * BASE_SPEED;
-
-			if movable.auto_despawn {
-				let distance = translation.distance(player.translation);
-				if DESPAWN_BULLET_DISTANCE < distance {
-					commands.entity(entity).despawn_recursive();
-				}
-				//const MARGIN: f32 = 200.;
-				//if translation.y > cursor.area.y / 2. + MARGIN
-				//	|| translation.y < -cursor.area.y / 2. - MARGIN
-				//	|| translation.x > cursor.area.x / 2. + MARGIN
-				//	|| translation.x < -cursor.area.x / 2. - MARGIN
-				//{
-				//	commands.entity(entity).despawn();
-				//}
-			}
-		}
+fn movable_system(mut query: Query<(&Velocity, &mut Transform), With<Bullet>>) {
+	for (velocity, mut transform) in query.iter_mut() {
+		let translation = &mut transform.translation;
+		translation.x += velocity.x * TIME_STEP * BASE_SPEED;
+		translation.y += velocity.y * TIME_STEP * BASE_SPEED;
 	}
 }

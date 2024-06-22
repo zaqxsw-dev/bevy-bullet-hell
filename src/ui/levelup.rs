@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 
 use crate::{
+	components::killable::Killable,
 	loading::{FontAssets, TextureAssets},
 	player::Player,
-	GameState, Killable,
+	GameState,
 };
 
 #[derive(Bundle)]

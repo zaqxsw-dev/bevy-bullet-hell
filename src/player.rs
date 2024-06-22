@@ -1,9 +1,10 @@
 use crate::actions::Actions;
+use crate::components::killable::Killable;
 use crate::loading::TextureAssets;
 use crate::ui::damage::EventDamageHintSpawn;
 use crate::{
-	movable_system, Bullet, Enemy, FromPlayer, GameData, GameState, Killable, MainCamera,
-	Mouse, Movable, SceneObject, SpriteSize, Velocity,
+	movable_system, Bullet, Enemy, FromPlayer, GameData, GameState, MainCamera, Mouse,
+	Movable, SceneObject, SpriteSize, Velocity,
 };
 use bevy::math::bounding::{Aabb2d, IntersectsVolume};
 use bevy::math::primitives::Circle;
@@ -92,7 +93,7 @@ fn get_player_damage_event(
 ) {
 	if let Ok(mut player) = query.get_single_mut() {
 		for ev in ev_pdamage.read() {
-			player.hp -= ev.damage;
+			player.hit(ev.damage);
 		}
 		if player.hp <= 0 {
 			game_state.set(GameState::Gameover)
@@ -288,7 +289,6 @@ fn player_fire_system(
 		if game_data.player_shooting_timer.finished()
 			&& (kb.pressed(KeyCode::Space) || buttons.pressed(MouseButton::Left))
 		{
-			println!("shot");
 			game_data.player_shooting_timer.reset();
 			let (x, y) = (player_tf.translation.x, player_tf.translation.y);
 			let p_transform = Vec2 { x, y };
@@ -327,12 +327,6 @@ fn player_fire_system(
 		}
 	}
 }
-
-//fn particles(time: Res<Time>, mut query: Query<&mut Transform, With<Mesh2dHandle>>) {
-//	//Move the plane back and forth to show particles ordering relative to it
-//	let mut transform = query.single_mut();
-//	transform.translation.z = (time.elapsed_seconds() * 2.5).sin() * 0.045 + 0.1;
-//}
 
 fn move_player(
 	time: Res<Time>,
