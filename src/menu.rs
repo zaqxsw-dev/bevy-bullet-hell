@@ -150,7 +150,9 @@ fn menu_action(
 	for (interaction, menu_button_action) in &interaction_query {
 		if *interaction == Interaction::Pressed {
 			match menu_button_action {
-				MenuButtonAction::Quit => app_exit_events.send(AppExit),
+				MenuButtonAction::Quit => {
+					app_exit_events.send(AppExit);
+				}
 				MenuButtonAction::Play => {
 					game_state.set(GameState::Playing);
 				}

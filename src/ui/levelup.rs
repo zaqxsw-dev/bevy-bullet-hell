@@ -37,7 +37,7 @@ fn get_text_element(ka: &Killable, fa: Res<FontAssets>) -> Text {
 	};
 	let current = ka.hp;
 	let max = ka.hp_max;
-	Text::from_section(format!("{current}/{max}"), style).with_alignment(TextAlignment::Right)
+	Text::from_section(format!("{current}/{max}"), style).with_justify(JustifyText::Right)
 }
 
 fn update_lvlup_menu(

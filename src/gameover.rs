@@ -1,10 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{
-	loading::FontAssets,
-	player::{Player, PlayerMove},
-	GameState, Killable, MainCamera, SceneObject,
-};
+use crate::{loading::FontAssets, player::PlayerMove, GameState, MainCamera, SceneObject};
 
 pub struct GameOverPlugin;
 
@@ -18,7 +14,7 @@ impl Plugin for GameOverPlugin {
 
 fn on_key_press(
 	mut game_state: ResMut<NextState<GameState>>,
-	keyboard_input: Res<Input<KeyCode>>,
+	keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
 	if keyboard_input.pressed(KeyCode::Space) {
 		game_state.set(GameState::Menu);

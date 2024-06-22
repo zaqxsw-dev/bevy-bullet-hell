@@ -1,41 +1,32 @@
 // disable console on windows for release builds
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use bevy::render::camera::ScalingMode;
-use bevy::render::render_resource::WgpuFeatures;
-use bevy::render::RenderPlugin;
+use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use bevy::winit::WinitWindows;
 use bevy::DefaultPlugins;
-use bevy::{prelude::*, render::settings::WgpuSettings};
-use bevy_game::{GameData, GamePlugin, MainCamera, Mouse};
+use bevy_bullet_hell::{GameData, GamePlugin, MainCamera, Mouse};
 use bevy_hanabi::HanabiPlugin;
 use std::io::Cursor;
 use winit::window::Icon;
 
 fn main() {
-	//let mut wgpu_settings = WgpuSettings::default();
-	//wgpu_settings.features.set(WgpuFeatures::VERTEX_WRITABLE_STORAGE, true);
-
 	App::new()
-		//.insert_resource(Msaa::Off)
 		.init_resource::<GameData>()
 		.insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
 		.insert_resource(Mouse {
 			position: Vec2::ZERO,
 			area: Vec2::ZERO,
 		})
-		.add_plugins(
-			DefaultPlugins.set(WindowPlugin {
-				primary_window: Some(Window {
-					title: "Bevy game".to_string(), // ToDo
-					resolution: (800., 600.).into(),
-					//canvas: Some("#bevy".to_owned()),
-					..default()
-				}),
+		.add_plugins(DefaultPlugins.set(WindowPlugin {
+			primary_window: Some(Window {
+				title: "Bevy bullet hell".to_string(),
+				resolution: (800., 600.).into(),
+				//canvas: Some("#bevy".to_owned()),
 				..default()
-			}), //.set(RenderPlugin { wgpu_settings }),
-		)
+			}),
+			..default()
+		}))
 		.add_plugins((HanabiPlugin, GamePlugin))
 		.add_systems(Startup, (init, set_window_icon))
 		.add_systems(Update, my_cursor_system)

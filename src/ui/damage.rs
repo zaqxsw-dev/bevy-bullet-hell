@@ -37,8 +37,7 @@ fn get_text_element(damage: u32, fa: Handle<Font>, transparency: f32) -> Text {
 		font_size: 12.0,
 		color: Color::rgba(0.98, 0.92, 0.84, transparency),
 	};
-	let alignment = TextAlignment::Center;
-	Text::from_section(format!("{damage}"), style).with_alignment(alignment)
+	Text::from_section(format!("{damage}"), style).with_justify(JustifyText::Center)
 }
 
 fn spawn_damage_hint(
@@ -46,7 +45,7 @@ fn spawn_damage_hint(
 	f_assets: Res<FontAssets>,
 	mut event: EventReader<EventDamageHintSpawn>,
 ) {
-	for ev in event.iter() {
+	for ev in event.read() {
 		commands
 			.spawn(Text2dBundle {
 				text: get_text_element(ev.damage, f_assets.fira_sans.clone(), 1.0),

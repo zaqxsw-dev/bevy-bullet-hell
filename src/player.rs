@@ -5,8 +5,9 @@ use crate::{
 	movable_system, Bullet, Enemy, FromPlayer, GameData, GameState, Killable, MainCamera,
 	Mouse, Movable, SceneObject, SpriteSize, Velocity,
 };
+use bevy::math::bounding::{Aabb2d, IntersectsVolume};
+use bevy::math::primitives::Circle;
 use bevy::prelude::*;
-use bevy::sprite::collide_aabb::collide;
 use bevy::sprite::MaterialMesh2dBundle;
 use bevy_hanabi::prelude::*;
 
@@ -90,7 +91,7 @@ fn get_player_damage_event(
 	mut game_state: ResMut<NextState<GameState>>,
 ) {
 	if let Ok(mut player) = query.get_single_mut() {
-		for ev in ev_pdamage.iter() {
+		for ev in ev_pdamage.read() {
 			player.hp -= ev.damage;
 		}
 		if player.hp <= 0 {
@@ -107,7 +108,7 @@ fn get_player_exp_event(
 		Ok(val) => val,
 		Err(_) => return,
 	};
-	for ev in event.iter() {
+	for ev in event.read() {
 		player.exp += ev.exp;
 
 		if player.exp >= player.next_lvl_exp {
@@ -147,7 +148,7 @@ fn spawn_player(
 			god_mode: false,
 			hp_max: 10,
 		})
-		.insert(SpriteSize(image.size()))
+		.insert(SpriteSize(image.size_f32()))
 		.insert(PlayerMove)
 		.insert(SceneObject)
 		.insert(Player::default());
@@ -155,10 +156,7 @@ fn spawn_player(
 	commands
 		.spawn(MaterialMesh2dBundle {
 			mesh: meshes
-				.add(Mesh::from(shape::Quad {
-					size: Vec2::splat(1.0),
-					..Default::default()
-				}))
+				.add(Mesh::from(bevy::math::primitives::Rectangle::new(1., 1.)))
 				.into(),
 			material: materials.add(ColorMaterial {
 				color: Color::PURPLE,
@@ -172,7 +170,6 @@ fn spawn_player(
 	gradient.add_key(0.0, Vec4::new(0.5, 0.5, 1.0, 1.0));
 	gradient.add_key(1.0, Vec4::new(0.5, 0.5, 1.0, 0.2));
 
-	let spawner = Spawner::rate(200.0.into());
 	let writer = ExprWriter::new();
 	let lifetime = writer.lit(1.).expr();
 	let age = writer.lit(0.).expr();
@@ -190,19 +187,20 @@ fn spawn_player(
 		speed: writer.lit(15.0).expr(),
 	};
 
-	let effect_asset = EffectAsset::new(4000, spawner, writer.finish())
-		.with_name("Effect")
-		.init(init_pos_circle)
-		.init(init_vel)
-		.init(init_age)
-		.init(init_lifetime)
-		//.update(update_drag)
-		//.update(tangent_accel)
-		.render(ColorOverLifetimeModifier { gradient })
-		.render(SizeOverLifetimeModifier {
-			gradient: Gradient::constant(Vec2::splat(1.0)),
-			screen_space_size: false,
-		});
+	let effect_asset =
+		EffectAsset::new(vec![4000], Spawner::rate(200.0.into()), writer.finish())
+			.with_name("Effect")
+			.init(init_pos_circle)
+			.init(init_vel)
+			.init(init_age)
+			.init(init_lifetime)
+			//.update(update_drag)
+			//.update(tangent_accel)
+			.render(ColorOverLifetimeModifier { gradient })
+			.render(SizeOverLifetimeModifier {
+				gradient: Gradient::constant(Vec2::splat(1.0)),
+				screen_space_size: false,
+			});
 
 	let effect = effects.add(effect_asset);
 	commands
@@ -228,14 +226,16 @@ fn player_damage_system(
 			if killable.god_mode || !game_data.player_godmod_timer.finished() {
 				return;
 			}
-			let collision = collide(
-				enemy_transform.translation,
-				enemy_transform.scale.truncate(),
-				player_transform.translation,
-				sprite.0 * player_transform.scale.truncate(),
-			);
+			let collision = Aabb2d::new(
+				enemy_transform.translation.truncate(),
+				enemy_transform.scale.truncate() / 2.,
+			)
+			.intersects(&Aabb2d::new(
+				player_transform.translation.truncate(),
+				sprite.0 * player_transform.scale.truncate() / 2.,
+			));
 
-			if let Some(_) = collision {
+			if collision {
 				game_data.player_godmod_timer.reset();
 				event.send(PlayerGetDamageEvent { damage: enemy.damage });
 			}
@@ -251,14 +251,16 @@ fn player_bullet_hit_system(
 ) {
 	for (bullet_entity, bullet_transform, bullet) in bullet_query.iter_mut() {
 		for (enemy_transform, mut killable) in enemy_query.iter_mut() {
-			let collision = collide(
-				bullet_transform.translation,
+			let collision = Aabb2d::new(
+				bullet_transform.translation.truncate(),
 				bullet_transform.scale.truncate(),
-				enemy_transform.translation,
-				Vec2 { x: 25.0, y: 25.0 },
-			);
+			)
+			.intersects(&Aabb2d::new(
+				enemy_transform.translation.truncate(),
+				Vec2 { x: 25., y: 25. },
+			));
 
-			if let Some(_) = collision {
+			if collision {
 				killable.hp -= bullet.damage;
 				damage_hint_event.send(EventDamageHintSpawn {
 					damage: bullet.damage as u32,
@@ -272,8 +274,8 @@ fn player_bullet_hit_system(
 
 fn player_fire_system(
 	mut commands: Commands,
-	kb: Res<Input<KeyCode>>,
-	buttons: Res<Input<MouseButton>>,
+	kb: Res<ButtonInput<KeyCode>>,
+	buttons: Res<ButtonInput<MouseButton>>,
 	query: Query<&Transform, (With<Player>, With<Killable>)>,
 	mut meshes: ResMut<Assets<Mesh>>,
 	mut materials: ResMut<Assets<ColorMaterial>>,
@@ -300,7 +302,7 @@ fn player_fire_system(
 			let mut spawn_laser = |x_offset: f32| {
 				commands
 					.spawn(MaterialMesh2dBundle {
-						mesh: meshes.add(shape::Circle::default().into()).into(),
+						mesh: meshes.add(Circle::default()).into(),
 						material: materials.add(ColorMaterial::from(Color::RED)),
 						transform: Transform::from_translation(Vec3::new(
 							x + x_offset,
