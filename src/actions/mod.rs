@@ -30,8 +30,8 @@ pub struct Actions {
 }
 
 pub fn set_menu_actions(
-	keyboard_input: Res<Input<KeyCode>>,
-	mouse_input: Res<Input<MouseButton>>,
+	keyboard_input: Res<ButtonInput<KeyCode>>,
+	mouse_input: Res<ButtonInput<MouseButton>>,
 	mut game_state: ResMut<NextState<GameState>>,
 ) {
 	if menu_open(GameControl::MenuOpen, &keyboard_input, &mouse_input) {
@@ -41,8 +41,8 @@ pub fn set_menu_actions(
 
 pub fn set_shooting_actions(
 	mut actions: ResMut<Actions>,
-	keyboard_input: Res<Input<KeyCode>>,
-	mouse_input: Res<Input<MouseButton>>,
+	keyboard_input: Res<ButtonInput<KeyCode>>,
+	mouse_input: Res<ButtonInput<MouseButton>>,
 ) {
 	actions.player_is_shooting = get_fire(GameControl::Fire, &keyboard_input, &mouse_input);
 	actions.player_is_second_shooting =
@@ -51,8 +51,8 @@ pub fn set_shooting_actions(
 
 pub fn set_movement_actions(
 	mut actions: ResMut<Actions>,
-	keyboard_input: Res<Input<KeyCode>>,
-	mouse_input: Res<Input<MouseButton>>,
+	keyboard_input: Res<ButtonInput<KeyCode>>,
+	mouse_input: Res<ButtonInput<MouseButton>>,
 ) {
 	let player_movement = Vec2::new(
 		get_movement(GameControl::Right, &keyboard_input, &mouse_input)
