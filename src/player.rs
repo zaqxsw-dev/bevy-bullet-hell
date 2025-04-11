@@ -34,6 +34,12 @@ impl Default for Player {
 #[derive(Component)]
 pub struct PlayerMove;
 
+#[derive(Component)]
+pub struct DodgeRoll {
+	pub timer: Timer,
+	pub direction: Vec2,
+}
+
 #[derive(Event)]
 pub struct PlayerGetDamageEvent {
 	damage: i32,
@@ -53,6 +59,8 @@ impl Plugin for PlayerPlugin {
 				Update,
 				(
 					move_player.run_if(in_state(GameState::Playing)),
+					camera_move.run_if(in_state(GameState::Playing)),
+					dodge_roll_system.run_if(in_state(GameState::Playing)),
 					turn_player.run_if(in_state(GameState::Playing)),
 					player_fire_system.run_if(in_state(GameState::Playing)),
 					movable_system.run_if(in_state(GameState::Playing)),
@@ -62,6 +70,50 @@ impl Plugin for PlayerPlugin {
 					get_player_exp_event.run_if(in_state(GameState::Playing)),
 				),
 			);
+	}
+}
+
+fn dodge_roll_system(
+	mut commands: Commands,
+	mut query: Query<(Entity, &mut Transform, Option<&mut DodgeRoll>), With<PlayerMove>>,
+	//player_query: Query<&Transform, With<PlayerMove>>,
+	time: Res<Time>,
+	keyboard_input: Res<ButtonInput<KeyCode>>,
+) {
+	for (entity, mut transform, dodge_roll) in query.iter_mut() {
+		if let Some(mut roll) = dodge_roll {
+			roll.timer.tick(time.delta());
+
+			if roll.timer.finished() {
+				commands.entity(entity).remove::<DodgeRoll>();
+			} else {
+				let roll_direction = Vec3::new(roll.direction.x, roll.direction.y, 0.0);
+				transform.translation += roll_direction * 500.0 * time.delta_seconds();
+			}
+		} else if keyboard_input.just_pressed(KeyCode::ShiftLeft) {
+			let mut roll_direction = Vec2::ZERO;
+
+			if keyboard_input.pressed(KeyCode::KeyW) {
+				roll_direction.y += 1.0;
+			}
+			if keyboard_input.pressed(KeyCode::KeyS) {
+				roll_direction.y -= 1.0;
+			}
+			if keyboard_input.pressed(KeyCode::KeyA) {
+				roll_direction.x -= 1.0;
+			}
+			if keyboard_input.pressed(KeyCode::KeyD) {
+				roll_direction.x += 1.0;
+			}
+
+			if roll_direction.length() > 0.0 {
+				roll_direction = roll_direction.normalize();
+				commands.entity(entity).insert(DodgeRoll {
+					timer: Timer::from_seconds(0.3, TimerMode::Once), // Roll duration
+					direction: roll_direction,
+				});
+			}
+		}
 	}
 }
 
@@ -328,11 +380,26 @@ fn player_fire_system(
 	}
 }
 
+fn camera_move(
+	actions: Res<Actions>,
+	player_query: Query<&Transform, With<PlayerMove>>,
+	mut camera_query: Query<&mut Transform, (With<MainCamera>, Without<PlayerMove>)>,
+) {
+	if actions.player_movement.is_none() {
+		return;
+	}
+	for player_transform in &player_query {
+		for mut camera in &mut camera_query {
+			camera.translation = player_transform.translation;
+		}
+	}
+}
+
 fn move_player(
 	time: Res<Time>,
 	actions: Res<Actions>,
 	mut player_query: Query<&mut Transform, With<PlayerMove>>,
-	mut camera_query: Query<&mut Transform, (With<MainCamera>, Without<PlayerMove>)>,
+	//mut camera_query: Query<&mut Transform, (With<MainCamera>, Without<PlayerMove>)>,
 ) {
 	if actions.player_movement.is_none() {
 		return;
@@ -346,9 +413,9 @@ fn move_player(
 	for mut player_transform in &mut player_query {
 		player_transform.translation += movement;
 	}
-	for mut camera in &mut camera_query {
-		camera.translation += movement;
-	}
+	//for mut camera in &mut camera_query {
+	//	camera.translation += movement;
+	//}
 }
 
 fn turn_player(mouse: Res<Mouse>, mut player_query: Query<&mut Transform, With<PlayerMove>>) {

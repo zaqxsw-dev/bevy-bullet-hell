@@ -2,6 +2,7 @@ mod actions;
 mod audio;
 pub mod components;
 pub mod constants;
+pub mod events;
 mod loading;
 mod menu;
 pub mod player;
