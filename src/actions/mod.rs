@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use crate::actions::game_control::{get_movement, GameControl};
 use crate::GameState;
 
-use self::game_control::{get_fire, menu_open};
+use self::game_control::get_fire;
 
 mod game_control;
 
@@ -16,7 +16,7 @@ impl Plugin for ActionsPlugin {
 			(
 				set_movement_actions.run_if(in_state(GameState::Playing)),
 				set_shooting_actions.run_if(in_state(GameState::Playing)),
-				set_menu_actions.run_if(in_state(GameState::Playing)),
+				menu_actions,
 			),
 		);
 	}
@@ -29,13 +29,16 @@ pub struct Actions {
 	pub player_is_second_shooting: bool,
 }
 
-pub fn set_menu_actions(
+pub fn menu_actions(
 	keyboard_input: Res<ButtonInput<KeyCode>>,
-	mouse_input: Res<ButtonInput<MouseButton>>,
 	mut game_state: ResMut<NextState<GameState>>,
+	current_game_state: Res<State<GameState>>,
 ) {
-	if menu_open(GameControl::MenuOpen, &keyboard_input, &mouse_input) {
-		game_state.set(GameState::Menu);
+	if keyboard_input.just_pressed(KeyCode::Escape) {
+		match current_game_state.get() {
+			GameState::Menu => game_state.set(GameState::Playing),
+			_ => game_state.set(GameState::Menu),
+		}
 	}
 }
 

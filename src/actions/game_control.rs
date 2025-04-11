@@ -61,14 +61,3 @@ pub fn get_fire(
 		_ => false,
 	}
 }
-
-pub fn menu_open(
-	control: GameControl,
-	input: &Res<ButtonInput<KeyCode>>,
-	_minput: &Res<ButtonInput<MouseButton>>,
-) -> bool {
-	match control {
-		GameControl::MenuOpen => input.just_pressed(KeyCode::Escape),
-		_ => false,
-	}
-}
